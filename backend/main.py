@@ -91,10 +91,11 @@ def ask(req: AskRequest):
 
 @app.get("/api/health")
 def health():
-    return {
-        "status": "ok",
-        "llm_mode": "live" if os.environ.get("ANTHROPIC_API_KEY") else "mock",
-    }
+    if os.environ.get("GROQ_API_KEY"):
+        return {"status": "ok", "llm_mode": "live", "provider": "groq"}
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return {"status": "ok", "llm_mode": "live", "provider": "claude"}
+    return {"status": "ok", "llm_mode": "mock", "provider": None}
 
 
 # --- serve the built React frontend ----------------------------------------
