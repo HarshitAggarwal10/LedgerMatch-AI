@@ -6,12 +6,13 @@ questions about a specific reconciliation run, grounded strictly in that
 run's own JSON output. The model is explicitly told not to use outside
 knowledge and to say so if the data doesn't contain the answer -- this is
 what keeps it from hallucinating a number that was never actually computed.
+
+Provider order: Groq -> Claude -> mock (see llm_provider.py).
 """
 
 import json
-import os
 
-MODEL = "claude-sonnet-4-6"
+from llm_provider import call_llm
 
 SYSTEM_PROMPT = """You are a finance ops assistant answering questions about \
 ONE specific reconciliation run. You will be given that run's full result \
@@ -22,7 +23,7 @@ data where relevant). No markdown headers, just plain prose."""
 
 
 def _mock_answer(question: str, result_context: dict) -> str:
-    """Deterministic fallback so the Q&A panel works without an API key."""
+    """Deterministic fallback so the Q&A panel works without any API key."""
     q = question.lower()
     scoring = result_context.get("scoring") or {}
     exceptions = result_context.get("exceptions", [])
@@ -45,48 +46,31 @@ def _mock_answer(question: str, result_context: dict) -> str:
         top = exceptions[:3]
         ids = ", ".join(e.get("id", "?") for e in top)
         return f"(mock) I'd start with: {ids or 'no exceptions to review'}."
-    return "(mock) I can only give simple canned answers without a live API key -- set ANTHROPIC_API_KEY for full reasoning."
+    return "(mock) No live provider is configured -- set GROQ_API_KEY (free tier) or ANTHROPIC_API_KEY in .env for full reasoning."
 
 
 def answer_question(question: str, result_context: dict) -> dict:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    # Trim the context so we're not shipping huge payloads on every question --
+    # the scoring summary + exceptions + a sample of matches is enough signal.
+    trimmed = {
+        "scoring": result_context.get("scoring"),
+        "performance": result_context.get("performance"),
+        "exceptions": result_context.get("exceptions", [])[:40],
+        "sample_matches": (
+            result_context.get("exact_matches", [])[:5]
+            + result_context.get("fuzzy_matches", [])[:5]
+            + result_context.get("llm_matches", [])[:5]
+        ),
+        "gateway_reconciliation_summary": {
+            k: len(v) for k, v in (result_context.get("gateway_reconciliation") or {}).items()
+        },
+    }
+    user_prompt = f"Reconciliation run data:\n{json.dumps(trimmed, default=str)}\n\nQuestion: {question}"
 
-    if not api_key:
-        return {"answer": _mock_answer(question, result_context), "mode": "mock"}
+    result = call_llm(SYSTEM_PROMPT, user_prompt, max_tokens=300)
 
-    try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
+    if result["text"] is not None:
+        return {"answer": result["text"], "mode": "live", "provider": result["provider"]}
 
-        # Trim the context so we're not shipping huge payloads on every question --
-        # the scoring summary + exceptions + a sample of matches is enough signal.
-        trimmed = {
-            "scoring": result_context.get("scoring"),
-            "performance": result_context.get("performance"),
-            "exceptions": result_context.get("exceptions", [])[:40],
-            "sample_matches": (
-                result_context.get("exact_matches", [])[:5]
-                + result_context.get("fuzzy_matches", [])[:5]
-                + result_context.get("llm_matches", [])[:5]
-            ),
-            "gateway_reconciliation_summary": {
-                k: len(v) for k, v in (result_context.get("gateway_reconciliation") or {}).items()
-            },
-        }
-
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=300,
-            system=SYSTEM_PROMPT,
-            messages=[{
-                "role": "user",
-                "content": f"Reconciliation run data:\n{json.dumps(trimmed, default=str)}\n\nQuestion: {question}",
-            }],
-        )
-        text = "".join(block.text for block in response.content if hasattr(block, "text"))
-        return {"answer": text.strip(), "mode": "live"}
-    except Exception as e:
-        return {
-            "answer": f"(mock, live call failed: {type(e).__name__}) " + _mock_answer(question, result_context),
-            "mode": "mock",
-        }
+    prefix = f"(mock, live call failed -- {result['error']}) " if result.get("error") and "no GROQ_API_KEY" not in result["error"] else "(mock) "
+    return {"answer": prefix + _mock_answer(question, result_context), "mode": "mock", "provider": None}
