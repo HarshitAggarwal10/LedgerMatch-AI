@@ -82,6 +82,7 @@ def run_matching(internal_df, bank_df) -> MatchResult:
                 "settled_amount": b_rec["settled_amount"],
                 "confidence": 100,
                 "method": "exact",
+                "reason": f"Reference '{i_rec['reference']}' and amount matched exactly on both sides -- no ambiguity to resolve.",
             })
         else:
             remaining_internal.append(i_rec)
@@ -124,6 +125,10 @@ def run_matching(internal_df, bank_df) -> MatchResult:
         if best_score >= FUZZY_AUTO_THRESHOLD:
             used_bank_ids.add(best_bank["bank_id"])
             pair["method"] = "fuzzy"
+            pair["reason"] = (
+                f"No matching reference number, but merchant name scored {round(best_score,1)}% "
+                f"similar and amount/date fell within tolerance -- confident enough to auto-match."
+            )
             result.fuzzy_matches.append(pair)
         elif best_score >= FUZZY_REVIEW_FLOOR:
             pair["method"] = "fuzzy_candidate"
