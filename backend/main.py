@@ -43,11 +43,12 @@ app.add_middleware(
 
 
 @app.post("/api/reconcile/sample")
-def reconcile_sample(n_records: int = 60):
-    internal_df, bank_df, gateway_df, answer_df = generate_dataset(n_records)
+def reconcile_sample(n_records: int = 60, seed: int | None = None):
+    internal_df, bank_df, gateway_df, answer_df = generate_dataset(n_records, seed=seed)
     result = run_pipeline(internal_df, bank_df, gateway_df=gateway_df, answer_key_df=answer_df)
     result["internal_preview"] = internal_df.head(8).to_dict("records")
     result["bank_preview"] = bank_df.head(8).to_dict("records")
+    result["seed_used"] = seed
     return result
 
 
