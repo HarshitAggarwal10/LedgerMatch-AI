@@ -122,10 +122,26 @@ python3 -m venv venv
 source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Optional: enable live Claude API calls (otherwise runs in mock mode)
+# Optional: enable live LLM calls (otherwise runs in mock mode)
 cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+Then edit `.env` and set **one** of these:
+
+```bash
+# Recommended: Groq has a generous free tier, no credit card required.
+# Get a key at https://console.groq.com/keys
+GROQ_API_KEY=gsk_your-key-here
+
+# Or: Claude, used only if GROQ_API_KEY is not set.
+# Get a key at https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+If Groq is set, it's used for everything (the LLM agent and the Settlement
+Q&A agent). If a live call ever fails for any reason — bad key, rate limit,
+no credit — the app catches it and falls back to mock mode automatically,
+labelling the response so it's never silently faked.
 
 ### 2. Frontend
 
@@ -193,10 +209,12 @@ answer key.)
 
 ## Tech stack
 
-**Backend:** Python, FastAPI, pandas, rapidfuzz, Faker, Anthropic SDK
+**Backend:** Python, FastAPI, pandas, rapidfuzz, Faker, Groq SDK, Anthropic SDK
 **Frontend:** React, Vite, Tailwind CSS v4
-**AI:** Claude (`claude-sonnet-4-6`) for ambiguous-match resolution and the
-Settlement Q&A agent — both with a fully offline mock fallback
+**AI:** Groq (`openai/gpt-oss-20b`, free tier) as the primary LLM provider,
+with Claude (`claude-sonnet-4-6`) as a secondary option and a fully
+offline mock fallback — used for both ambiguous-match resolution and the
+Settlement Q&A agent
 
 ## What's intentionally *not* here
 
