@@ -1,8 +1,9 @@
-export default function Header({ llmMode }) {
+export default function Header({ llmMode, provider }) {
   const isLive = llmMode === "live";
+  const providerLabel = provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : "";
   const label = llmMode
     ? isLive
-      ? "● agent: live (Claude API)"
+      ? `● agent: live (${providerLabel})`
       : "● agent: mock mode (no API key set)"
     : "checking mode…";
 

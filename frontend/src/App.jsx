@@ -10,6 +10,7 @@ import { fetchHealth, reconcileSample, reconcileUpload } from "./api";
 
 export default function App() {
   const [llmMode, setLlmMode] = useState(null);
+  const [provider, setProvider] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -17,7 +18,10 @@ export default function App() {
 
   useEffect(() => {
     fetchHealth()
-      .then((h) => setLlmMode(h.llm_mode))
+      .then((h) => {
+        setLlmMode(h.llm_mode);
+        setProvider(h.provider);
+      })
       .catch(() => setLlmMode(null));
   }, []);
 
@@ -58,7 +62,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-bg text-text-primary">
-      <Header llmMode={llmMode} />
+      <Header llmMode={llmMode} provider={provider} />
       <main>
         <Hero
           onRunSample={runSample}

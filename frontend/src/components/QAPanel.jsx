@@ -19,7 +19,7 @@ export default function QAPanel({ result }) {
     setAsking(true);
     try {
       const res = await askQuestion(question, result);
-      setMessages((m) => [...m, { role: "agent", text: res.answer, mode: res.mode }]);
+      setMessages((m) => [...m, { role: "agent", text: res.answer, mode: res.mode, provider: res.provider }]);
     } catch {
       setMessages((m) => [...m, { role: "agent", text: "Couldn't reach the backend for that one.", mode: "error" }]);
     } finally {
@@ -64,6 +64,9 @@ export default function QAPanel({ result }) {
             {m.text}
             {m.role === "agent" && m.mode === "mock" && (
               <span className="mt-1 block font-mono text-[0.65rem] text-accent">(mock mode)</span>
+            )}
+            {m.role === "agent" && m.mode === "live" && m.provider && (
+              <span className="mt-1 block font-mono text-[0.65rem] text-success">via {m.provider}</span>
             )}
           </div>
         ))}
