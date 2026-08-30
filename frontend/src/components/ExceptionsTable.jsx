@@ -3,7 +3,7 @@ function formatAmount(n) {
   return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function ExceptionsTable({ exceptions }) {
+export default function ExceptionsTable({ exceptions, onExplain }) {
   return (
     <div>
       <h3 className="flex items-center gap-2 font-display text-xl font-normal">
@@ -20,7 +20,7 @@ export default function ExceptionsTable({ exceptions }) {
         <table className="w-full border-collapse text-[0.82rem]">
           <thead>
             <tr>
-              {["Side", "ID", "Merchant", "Amount", "Reason"].map((h) => (
+              {["Side", "ID", "Merchant", "Amount", "Reason", ""].map((h) => (
                 <th
                   key={h}
                   className="sticky top-0 border-b border-border bg-bg-card px-3 py-2 text-left font-mono text-[0.68rem] uppercase tracking-wide text-text-muted"
@@ -32,7 +32,7 @@ export default function ExceptionsTable({ exceptions }) {
           </thead>
           <tbody>
             {exceptions.length === 0 ? (
-              <tr><td colSpan={5} className="px-3 py-4 text-text-secondary">No exceptions — everything resolved.</td></tr>
+              <tr><td colSpan={6} className="px-3 py-4 text-text-secondary">No exceptions — everything resolved.</td></tr>
             ) : (
               exceptions.map((e, i) => (
                 <tr key={i} className="border-b border-border-soft last:border-none hover:bg-bg-card-hover">
@@ -41,6 +41,14 @@ export default function ExceptionsTable({ exceptions }) {
                   <td className="px-3 py-2 font-mono text-text-secondary">{e.merchant_name}</td>
                   <td className="px-3 py-2 font-mono text-text-secondary">₹{formatAmount(e.amount)}</td>
                   <td className="px-3 py-2 text-text-secondary">{e.reason}</td>
+                  <td className="px-3 py-2">
+                    <button
+                      onClick={() => onExplain?.(e.id)}
+                      className="whitespace-nowrap rounded border border-border px-2 py-1 font-mono text-[0.68rem] text-text-secondary transition hover:border-accent hover:text-accent-bright"
+                    >
+                      Explain →
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
