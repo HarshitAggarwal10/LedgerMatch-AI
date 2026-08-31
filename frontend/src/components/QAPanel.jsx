@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { askQuestion } from "../api";
 
 const SUGGESTIONS = [
@@ -7,10 +7,12 @@ const SUGGESTIONS = [
   "Summarize this run in two sentences.",
 ];
 
-export default function QAPanel({ result }) {
+export default function QAPanel({ result, externalQuestion }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [asking, setAsking] = useState(false);
+  const panelRef = useRef(null);
+  const lastExternalRef = useRef(null);
 
   const send = async (question) => {
     if (!question.trim() || asking) return;
@@ -27,8 +29,19 @@ export default function QAPanel({ result }) {
     }
   };
 
+  // When a row's "Explain →" button fires a question up from ExceptionsTable,
+  // scroll the panel into view and send it automatically.
+  useEffect(() => {
+    if (externalQuestion && externalQuestion.nonce !== lastExternalRef.current) {
+      lastExternalRef.current = externalQuestion.nonce;
+      panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      send(externalQuestion.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalQuestion]);
+
   return (
-    <div className="mt-14 rounded-xl border border-border bg-bg-card p-6">
+    <div ref={panelRef} className="mt-14 rounded-xl border border-border bg-bg-card p-6">
       <p className="mb-1 font-mono text-xs uppercase tracking-widest text-accent">
         Settlement Q&amp;A agent
       </p>

@@ -1,27 +1,42 @@
+import { useState } from "react";
 import StatsGrid from "./StatsGrid";
 import MatchedTable from "./MatchedTable";
 import ExceptionsTable from "./ExceptionsTable";
 import GatewaySection from "./GatewaySection";
 import QAPanel from "./QAPanel";
+import TrapSpotlight from "./TrapSpotlight";
+import PipelineProgress from "./PipelineProgress";
+import ConfidenceExplorer from "./ConfidenceExplorer";
 import { downloadCsv } from "../csvExport";
 
 export default function ResultsSection({ loading, loadingText, result }) {
+  const [explainQuestion, setExplainQuestion] = useState(null);
+
   return (
     <section id="run" className="mx-auto max-w-6xl px-8 py-16">
-      {loading && (
-        <div className="flex flex-col items-center gap-4 py-20 text-text-secondary">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
-          <p>{loadingText}</p>
-        </div>
-      )}
+      {loading && <PipelineProgress loadingText={loadingText} />}
 
       {!loading && result && (
         <>
+          {result.seed_used !== undefined && result.seed_used !== null && (
+            <p className="mb-4 font-mono text-[0.72rem] text-text-muted">
+              Reproducible run — seed={result.seed_used}
+            </p>
+          )}
+          <TrapSpotlight trapCase={result.scoring?.trap_case} />
+
           <StatsGrid data={result} />
+
+          <ConfidenceExplorer data={result} />
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <MatchedTable data={result} />
-            <ExceptionsTable exceptions={result.exceptions} />
+            <ExceptionsTable
+              exceptions={result.exceptions}
+              onExplain={(id) =>
+                setExplainQuestion({ text: `Why didn't ${id} match?`, nonce: Date.now() })
+              }
+            />
           </div>
 
           <div className="mt-8">
@@ -34,7 +49,7 @@ export default function ResultsSection({ loading, loadingText, result }) {
           </div>
 
           <GatewaySection gatewayReconciliation={result.gateway_reconciliation} />
-          <QAPanel result={result} />
+          <QAPanel result={result} externalQuestion={explainQuestion} />
         </>
       )}
     </section>
