@@ -5,8 +5,10 @@ export async function fetchHealth() {
   return res.json();
 }
 
-export async function reconcileSample(nRecords = 60) {
-  const res = await fetch(`${BASE}/api/reconcile/sample?n_records=${nRecords}`, {
+export async function reconcileSample(nRecords = 60, seed = null) {
+  const params = new URLSearchParams({ n_records: nRecords });
+  if (seed !== null && seed !== "") params.set("seed", seed);
+  const res = await fetch(`${BASE}/api/reconcile/sample?${params.toString()}`, {
     method: "POST",
   });
   return res.json();

@@ -15,6 +15,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [result, setResult] = useState(null);
+  const [seed, setSeed] = useState("");
 
   useEffect(() => {
     fetchHealth()
@@ -30,7 +31,15 @@ export default function App() {
     setLoadingText("Generating a fresh synthetic batch…");
     document.getElementById("run")?.scrollIntoView({ behavior: "smooth" });
     try {
-      const data = await reconcileSample(60);
+      // Race against a minimum display time so the pipeline-stage animation
+      // is actually visible -- the backend itself typically responds in
+      // single-digit milliseconds, which would otherwise make the staged
+      // reveal flash by unseen. Purely a UX pacing choice; no data shown
+      // during this window is fabricated -- it's generic stage labels only.
+      const [data] = await Promise.all([
+        reconcileSample(60, seed || null),
+        new Promise((r) => setTimeout(r, 1400)),
+      ]);
       setResult(data);
     } finally {
       setLoading(false);
@@ -42,7 +51,10 @@ export default function App() {
     setLoadingText("Reconciling your files…");
     document.getElementById("run")?.scrollIntoView({ behavior: "smooth" });
     try {
-      const data = await reconcileUpload(internalFile, bankFile);
+      const [data] = await Promise.all([
+        reconcileUpload(internalFile, bankFile),
+        new Promise((r) => setTimeout(r, 1400)),
+      ]);
       if (data.error) {
         setLoading(false);
         return (
@@ -68,6 +80,8 @@ export default function App() {
           onRunSample={runSample}
           onShowUpload={() => setShowUpload(true)}
           running={loading}
+          seed={seed}
+          onSeedChange={setSeed}
         />
         {showUpload && <UploadPanel onRunUpload={runUpload} running={loading} />}
         {(loading || result) && (

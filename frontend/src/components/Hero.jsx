@@ -11,7 +11,7 @@ const statusColor = {
   exception: "text-danger",
 };
 
-export default function Hero({ onRunSample, onShowUpload, running }) {
+export default function Hero({ onRunSample, onShowUpload, running, seed, onSeedChange }) {
   return (
     <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-8 pb-16 pt-20 md:grid-cols-[1.1fr_0.9fr]">
       <div>
@@ -29,7 +29,7 @@ export default function Hero({ onRunSample, onShowUpload, running }) {
           and explaining, record by record, everything that doesn't. No cherry-picked
           demo runs: every number below is computed live.
         </p>
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-8 flex flex-wrap items-center gap-3">
           <button
             onClick={onRunSample}
             disabled={running}
@@ -42,6 +42,27 @@ export default function Hero({ onRunSample, onShowUpload, running }) {
             className="rounded-lg border border-border px-6 py-3 font-semibold transition hover:border-accent hover:text-accent-bright"
           >
             Use my own CSVs
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <label htmlFor="seed-input" className="font-mono text-[0.72rem] text-text-muted">
+            seed (optional, for a reproducible run):
+          </label>
+          <input
+            id="seed-input"
+            type="number"
+            value={seed}
+            onChange={(e) => onSeedChange(e.target.value)}
+            placeholder="random"
+            className="w-24 rounded border border-border bg-bg-card px-2 py-1 font-mono text-[0.72rem] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => onSeedChange("42")}
+            className="font-mono text-[0.68rem] text-text-muted underline decoration-dotted hover:text-accent-bright"
+          >
+            use 42
           </button>
         </div>
       </div>
