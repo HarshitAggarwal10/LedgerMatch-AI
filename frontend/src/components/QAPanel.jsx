@@ -68,11 +68,11 @@ export default function QAPanel({ result, externalQuestion }) {
             key={i}
             className={`max-w-[85%] rounded-lg px-4 py-2.5 text-sm ${
               m.role === "user"
-                ? "self-end bg-text-primary text-[#17140f]"
-                : "self-start border border-border bg-bg text-text-secondary"
+                ? "self-end bg-text-primary font-medium text-[#17140f]"
+                : "self-start border border-border bg-[#1c1811] text-text-primary shadow-sm"
             }`}
           >
-            {m.text}
+            <p className="whitespace-pre-wrap leading-relaxed">{m.text || "No response generated."}</p>
             {m.role === "agent" && m.mode === "mock" && (
               <span className="mt-1 block font-mono text-[0.65rem] text-accent">(mock mode)</span>
             )}
@@ -82,7 +82,7 @@ export default function QAPanel({ result, externalQuestion }) {
           </div>
         ))}
         {asking && (
-          <div className="self-start rounded-lg border border-border bg-bg px-4 py-2.5 text-sm text-text-muted">
+          <div className="self-start rounded-lg border border-border bg-[#1c1811] px-4 py-2.5 text-sm text-text-secondary">
             thinking…
           </div>
         )}

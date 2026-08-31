@@ -41,6 +41,18 @@ def _call_groq(system_prompt, user_prompt, max_tokens, api_key):
             {"role": "user", "content": user_prompt},
         ],
     )
-    text = response.choices[0].message.content
-    return {"text": text.strip(), "mode": "live", "provider": f"groq:{GROQ_MODEL}"}
+    msg = response.choices[0].message
+    text = (msg.content or "").strip()
+    if not text and getattr(msg, "reasoning", None):
+        text = str(msg.reasoning).strip()
+
+    if not text:
+        return {
+            "text": None,
+            "mode": "mock",
+            "provider": None,
+            "error": "Groq returned empty response",
+        }
+
+    return {"text": text, "mode": "live", "provider": f"groq:{GROQ_MODEL}"}
 

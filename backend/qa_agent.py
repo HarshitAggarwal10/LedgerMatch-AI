@@ -86,7 +86,7 @@ def answer_question(question: str, result_context: dict) -> dict:
     }
     user_prompt = f"Reconciliation run data:\n{json.dumps(trimmed, default=str)}\n\nQuestion: {question}"
 
-    result = call_llm(SYSTEM_PROMPT, user_prompt, max_tokens=300)
+    result = call_llm(SYSTEM_PROMPT, user_prompt, max_tokens=1000)
 
     if result["text"] is not None:
         return {"answer": result["text"], "mode": "live", "provider": result["provider"]}

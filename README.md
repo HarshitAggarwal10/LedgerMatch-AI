@@ -1,122 +1,116 @@
 # LedgerMatch AI
 
-**AI Finance Controller — Razorpay AI Buildathon**
+**Autonomous Multi-Source Reconciliation & Finance Controller Agent**
 
-LedgerMatch reconciles an internal payment ledger against a bank settlement
-file *and* a payment gateway settlement report — three independent records
-of the same underlying money movement — and reports exactly what agrees,
-what doesn't, and why. Every run is scored against a known ground truth, so
-the numbers below are measured, not claimed.
-
-```
-Match rate:        88.5%   (54 of 61 true matches found)
-False-match rate:   0.0%   (wrongly-matched pairs -- the costly kind)
-Exceptions:            13   (every one with a plain-English reason)
-Throughput:      ~12,600 records/sec  (174 records in 0.014s)
-Three-way check:  50 full match · 4 partial · 3 gateway-only
-```
-
-*(Numbers above are from one real run in mock LLM mode. They shift slightly
-between runs since the synthetic batch is regenerated fresh each time — see
-[Why the numbers move](#why-the-numbers-move-between-runs).)*
+LedgerMatch AI is an AI-powered finance operations controller designed to close the reconciliation loop across internal payment ledgers, bank settlement feeds, and payment gateway reports. It combines deterministic rule engines with LLM reasoning to resolve ambiguous matches, verify fee tolerances, detect anomalies, and report an honest, auditable list of exceptions.
 
 ---
 
-## What it does
+## Key Features
 
-1. **Exact match** — reference ID + amount, matched to the paisa. Resolves
-   most real-world reconciliation instantly, no AI involved.
-2. **Fuzzy match** — merchant-name similarity (`rapidfuzz`) plus amount and
-   date tolerance, for records the bank feed wrote slightly differently.
-3. **LLM agent review** — whatever's still ambiguous goes to an LLM (Groq
-   API), which reasons about both records side by side and returns a
-   decision, confidence score, and one-sentence explanation.
-4. **Gateway cross-check** — a *third*, independent source (the payment
-   gateway's own settlement file) confirms or flags what the first two
-   stages agreed on, upgrading this from a two-file diff to genuine
-   multi-source reconciliation.
-5. **Honest exceptions** — anything still unresolved is reported with a
-   specific reason, never hidden or forced into a fake match.
-6. **Settlement Q&A agent** — ask natural-language questions about a
-   specific run ("how much is still unreconciled?", "why didn't TXN1042
-   match?") and get an answer grounded strictly in that run's own data.
-
-## Interactive features
-
-- **Click any matched row** to see exactly why it matched (which pass
-  resolved it, and the specific reasoning for agent-resolved pairs).
-- **"Explain →" on any exception** jumps to the Q&A panel and asks about
-  that specific record automatically.
-- **Trap-case spotlight** — every run includes one deliberately engineered
-  "lookalike" record designed to tempt a false match. The UI reports,
-  honestly, whether *this* run got fooled by it.
-- **Confidence threshold slider** — drag the auto-match confidence cutoff
-  and watch match rate / false-match rate recompute live, entirely
-  client-side, visualizing the precision-vs-recall tradeoff.
-- **Confidence distribution histogram** — see the spread of match
-  confidence scores across the whole batch at a glance.
-- **Seeded demo mode** — set a seed (or use the "use 42" shortcut) to
-  replay the exact same batch and results for a reproducible pitch demo.
-
-## Why this design
-
-The brief's bar is explicit: *throughput, measured accuracy, and an honest
-exception list — one cherry-picked match proves nothing.* Every design
-choice here traces back to that:
-
-- The synthetic data generator injects deliberate typos, amount drift, date
-  shifts, duplicates, missing records — **and one "lookalike trap"**: a
-  bank-only record engineered to superficially resemble a real transaction,
-  specifically to test whether the pipeline can be fooled into a false
-  match. Its outcome is reported honestly either way.
-- Every run is scored against the ground truth the generator itself
-  created, so the match rate and false-match rate are computed, not
-  asserted.
-- The pipeline runs in **mock LLM mode by default** (no API key needed) so
-  it's fully demoable and testable without cost — but every mock decision
-  is labelled `(mock)` everywhere in the UI and API response, never
-  silently substituted for a real one.
-- The pipeline is timed end-to-end and reports records/sec, directly
-  answering "throughput" in the judging bar.
-
-## Why the numbers move between runs
-
-The synthetic dataset is regenerated fresh on every "Run on sample batch"
-click (no fixed seed by default), so a handful of edge cases — like whether
-the lookalike trap happens to get auto-matched — vary run to run. This is
-intentional: it proves the reported numbers are computed live rather than
-baked into a single rehearsed demo. Pass `?n_records=60` (or any seed via
-`generate_dataset(n_records, seed=...)` in `data_generator.py`) for a
-reproducible run.
+- **Multi-Tier Matching Pipeline**:
+  - **Tier 1 (Exact Match)**: Deterministic reference ID and paisa-level amount matching.
+  - **Tier 2 (Fuzzy Match)**: Token-sort string similarity (`rapidfuzz`) with configurable amount and date drift tolerance.
+  - **Tier 3 (LLM Reasoning Agent)**: Evaluates complex edge cases (abbreviated legal names, fee structures, date delays) using Groq LLM inference, returning structured decisions and explanations.
+- **Three-Way Gateway Cross-Check**:
+  - Validates settled pairs against payment gateway reports, accounting for gateway commission/fee deductions, identifying missed webhooks or unauthorized entries.
+- **Settlement Q&A Agent**:
+  - Natural language querying interface grounded strictly in the current reconciliation batch's data.
+- **Adversarial Trap Verification & Scoring**:
+  - Built-in evaluation engine scores every run against ground-truth answer keys, tracking true match rates, false match rates, and performance against planted lookalike records.
+- **Interactive Precision-Recall Explorer**:
+  - Client-side confidence threshold adjustment with live recalculation of match rates and confidence histograms.
+- **Dual-Mode Operation**:
+  - Runs with live Groq LLM inference or an offline deterministic heuristic fallback when no API key is provided.
 
 ---
 
-## Project structure
+## System Architecture
+
+```
+                    +-----------------------------+
+                    | Synthetic Data Generator /  |
+                    |    Uploaded CSV Datasets    |
+                    +--------------+--------------+
+                                   |
+         +-------------------------+-------------------------+
+         |                                                   |
+         v                                                   v
++------------------+                               +--------------------+
+| Internal Ledger  |                               |  Bank Settlements  |
++--------+---------+                               +---------+----------+
+         |                                                   |
+         +-------------------------+-------------------------+
+                                   |
+                                   v
+             +-------------------------------------------+
+             | Pass 1: Exact Match Engine                |
+             | - Reference ID & exact settled amount     |
+             +---------------------+---------------------+
+                                   | Unresolved
+                                   v
+             +-------------------------------------------+
+             | Pass 2: Fuzzy Match Engine (rapidfuzz)    |
+             | - Name token similarity                   |
+             | - Amount & date tolerance windows         |
+             +---------------------+---------------------+
+                                   | Ambiguous (Score: 55-89)
+                                   v
+             +-------------------------------------------+
+             | Pass 3: LLM Agent Review (Groq API)       |
+             | - Pairwise JSON reasoning & explanation   |
+             +---------------------+---------------------+
+                                   |
+                         Resolved Transactions
+                                   |
+                                   v
+             +-------------------------------------------+
+             | Stage 4: Gateway Cross-Check (3-Way)      |
+             | - Compares against Payment Gateway report |
+             | - Validates fee deductions (e.g. 1.9%+2)  |
+             +---------------------+---------------------+
+                                   |
+         +-------------------------+-------------------------+
+         |                                                   |
+         v                                                   v
++------------------+                               +--------------------+
+| Ground-Truth     |                               | Exception Matrix   |
+| Evaluator        |                               | & Settlement Q&A   |
++------------------+                               +--------------------+
+```
+
+---
+
+## Project Structure
 
 ```
 ledgermatch-ai/
 ├── backend/
-│   ├── main.py              FastAPI app (reconcile/upload/ask/health endpoints)
-│   ├── data_generator.py    synthetic 3-source dataset + ground-truth answer key
-│   ├── matcher.py           exact + fuzzy two-pass matching engine
-│   ├── llm_agent.py         LLM resolution for ambiguous pairs (live + mock)
-│   ├── gateway_matcher.py   three-way reconciliation against the gateway source
-│   ├── evaluator.py         scores pipeline output against ground truth
-│   ├── pipeline.py          orchestrates every stage, times the run
-│   ├── qa_agent.py          Settlement Q&A, grounded in run data
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/                React + Vite + Tailwind v4
+│   ├── main.py              # FastAPI application endpoints and static file serving
+│   ├── pipeline.py          # Orchestration pipeline for multi-pass matching
+│   ├── matcher.py           # Exact and fuzzy matching logic
+│   ├── gateway_matcher.py   # Three-way gateway reconciliation module
+│   ├── llm_agent.py         # LLM agent for ambiguous transaction pair resolution
+│   ├── llm_provider.py      # LLM provider wrapper (Groq SDK + mock fallback)
+│   ├── qa_agent.py          # Run-grounded conversational Q&A agent
+│   ├── data_generator.py    # Synthetic multi-source dataset and ground truth generator
+│   ├── evaluator.py         # Ground-truth accuracy and trap-case evaluation metrics
+│   ├── requirements.txt     # Python backend dependencies
+│   ├── .env.example         # Template for environment variables
+│   └── .env                 # Environment configuration (API keys)
+├── frontend/
 │   ├── src/
-│   │   ├── components/      Header, Hero, StatsGrid, MatchedTable,
-│   │   │                    ExceptionsTable, GatewaySection, QAPanel,
-│   │   │                    PipelineSteps, Architecture, Footer, etc.
-│   │   ├── api.js           backend API client
-│   │   ├── csvExport.js     client-side CSV report download
-│   │   └── App.jsx
-│   ├── vite.config.js       dev-server proxy: /api -> FastAPI on :8000
-│   └── package.json
-└── sample_data/             one pre-generated batch for quick inspection
+│   │   ├── components/      # Modular UI components (Tables, Charts, Panels, Hero)
+│   │   ├── api.js           # REST client for backend API communication
+│   │   ├── currency.js      # Multi-currency formatting utilities
+│   │   ├── csvExport.js     # Client-side reconciliation report exporter
+│   │   ├── App.jsx          # Root application component
+│   │   ├── main.jsx         # React application entry point
+│   │   └── index.css        # Tailwind CSS styling and theme definitions
+│   ├── package.json         # Node.js dependencies and scripts
+│   ├── vite.config.js       # Vite configuration with API proxy
+│   └── index.html           # HTML template
+└── sample_data/             # Pre-generated test CSV files for inspection
     ├── internal_ledger.csv
     ├── bank_settlements.csv
     ├── gateway_settlements.csv
@@ -125,108 +119,163 @@ ledgermatch-ai/
 
 ---
 
-## Running it locally
+## Setup & Installation
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+
 
-### 1. Backend
-
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Optional: enable live LLM calls (otherwise runs in mock mode)
-cp .env.example .env
-```
-
-Then edit `.env` and set your key:
-
-```bash
-GROQ_API_KEY=gsk_your-key-here
-```
-
-If Groq is set, it's used for the LLM agent and Settlement Q&A agent. If a live
-call fails or no key is set, the app falls back to mock mode automatically.
-
-### 2. Frontend
-
-```bash
-cd frontend
-npm install
-npm run build          # produces frontend/dist, which FastAPI serves in production
-```
-
-### 3. Run
-
-```bash
-cd backend
-# if you set an API key in .env, load it into the shell first:
-export $(grep -v '^#' .env | xargs)   # skip this line if running in mock mode
-
-uvicorn main:app --port 8000
-```
-
-Open **http://localhost:8000** — click "Run on sample batch."
-
-### Frontend dev mode (hot reload, optional)
-
-```bash
-# terminal 1
-cd backend && uvicorn main:app --reload --port 8000
-
-# terminal 2
-cd frontend && npm run dev
-```
-
-Open **http://localhost:5173** — the dev server proxies `/api` to FastAPI
-on :8000 automatically (see `vite.config.js`).
+- **Python**: Version 3.11 or higher
+- **Node.js**: Version 18 or higher
+- **Package Managers**: `pip` and `npm`
 
 ---
 
-## Using your own data
+### 1. Backend Setup
 
-Click **"Use my own CSVs"** on the running app. Required columns:
+1. Open a terminal and navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
 
-| Internal ledger | Bank settlement file |
-|---|---|
-| `internal_id` | `bank_id` |
-| `date` | `value_date` |
-| `merchant_name` | `narration` |
-| `amount` | `settled_amount` |
-| `reference` | `reference` |
+2. Create and activate a Python virtual environment:
+   - **Linux / macOS**:
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+   - **Windows (PowerShell)**:
+     ```powershell
+     python -m venv venv
+     .\venv\Scripts\Activate.ps1
+     ```
+   - **Windows (Command Prompt)**:
+     ```cmd
+     python -m venv venv
+     .\venv\Scripts\activate.bat
+     ```
 
-(Gateway three-way reconciliation and ground-truth scoring are only
-available on the synthetic sample batch, since real uploads have no known
-answer key.)
+3. Install required Python packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ---
 
-## API reference
+### 2. Groq Cloud API Key Configuration
 
-| Endpoint | Method | Purpose |
-|---|---|---|
-| `/api/reconcile/sample?n_records=60&seed=42` | POST | Generate a synthetic batch and reconcile it (with scoring). `seed` is optional — omit for a fresh random batch each time, set it for a reproducible run. |
-| `/api/reconcile/upload` | POST | Reconcile two uploaded CSVs (`internal_file`, `bank_file`) |
-| `/api/ask` | POST | `{question, result_context}` → grounded answer about that run |
-| `/api/health` | GET | `{status, llm_mode, provider}` — reports live vs. mock and active provider |
+LedgerMatch AI supports live LLM execution via Groq Cloud (`llama-3.3-70b-versatile`). If no API key is provided, the application automatically falls back to an offline heuristic mock mode without crashing.
+
+1. Obtain a free API key from the [Groq Cloud Console](https://console.groq.com/keys).
+2. Copy the sample environment file to `.env` in the `backend/` folder:
+   - **Linux / macOS**:
+     ```bash
+     cp .env.example .env
+     ```
+   - **Windows**:
+     ```powershell
+     copy .env.example .env
+     ```
+3. Open `backend/.env` and add your API key:
+   ```env
+   GROQ_API_KEY=gsk_your_actual_groq_api_key_here
+   ```
 
 ---
 
-## Tech stack
+### 3. Frontend Setup
 
-**Backend:** Python, FastAPI, pandas, rapidfuzz, Faker, Groq SDK
-**Frontend:** React, Vite, Tailwind CSS v4
-**AI:** Groq (`openai/gpt-oss-20b`) with offline mock fallback
+1. In a separate terminal, navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
 
-## What's intentionally *not* here
+2. Install Node dependencies:
+   ```bash
+   npm install
+   ```
 
-No deep learning / trained neural model. Reconciliation is fundamentally a
-matching problem, not a prediction problem — deterministic rule-based
-logic handles the bulk of it correctly and explainably, and the LLM is used
-specifically where judgment calls, not pattern learning, are needed. Using
-a heavier ML model here would have meant strictly worse and less
-explainable, not more impressive.
+3. Build the frontend distribution bundle (for production serving via FastAPI):
+   ```bash
+   npm run build
+   ```
+
+---
+
+## Running the Application
+
+### Option A: Unified Mode (FastAPI serves built frontend)
+
+1. Make sure you built the frontend using `npm run build` in the `frontend` folder.
+2. In the `backend` directory (with virtual environment activated):
+   ```bash
+   uvicorn main:app --port 8000
+   ```
+3. Open your browser and navigate to:
+   ```
+   http://localhost:8000
+   ```
+
+---
+
+### Option B: Development Mode (Hot Reload)
+
+1. **Terminal 1 (Backend)**:
+   ```bash
+   cd backend
+   # Activate virtual environment first
+   uvicorn main:app --reload --port 8000
+   ```
+
+2. **Terminal 2 (Frontend)**:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+3. Open your browser and navigate to:
+   ```
+   http://localhost:5173
+   ```
+   *(Vite automatically proxies `/api/*` requests to FastAPI on port 8000).*
+
+---
+
+## Custom CSV Schema Requirements
+
+When using the **"Use my own CSVs"** upload feature, ensure your files include the following headers:
+
+### Internal Ledger (`internal_file`)
+| Column Name | Type | Description |
+| :--- | :--- | :--- |
+| `internal_id` | String | Unique transaction ID (e.g., `TXN1001`) |
+| `date` | Date (`YYYY-MM-DD`) | Transaction initiation date |
+| `merchant_name` | String | Recorded counterparty or vendor name |
+| `amount` | Float | Transaction gross amount |
+| `reference` | String | External payment reference or invoice ID |
+
+### Bank Settlement File (`bank_file`)
+| Column Name | Type | Description |
+| :--- | :--- | :--- |
+| `bank_id` | String | Bank statement line item ID (e.g., `STL5001`) |
+| `value_date` | Date (`YYYY-MM-DD`) | Value/settlement date |
+| `narration` | String | Bank transaction narration / payee text |
+| `settled_amount` | Float | Net amount received in bank |
+| `reference` | String | Bank reference number (if available) |
+
+---
+
+## API Reference
+
+| Endpoint | Method | Parameters / Body | Description |
+| :--- | :---: | :--- | :--- |
+| `/api/reconcile/sample` | `POST` | `n_records: int` (default: 60)<br>`seed: int` (optional) | Generates synthetic datasets, executes 3-pass reconciliation + gateway cross-check, and computes evaluation metrics. |
+| `/api/reconcile/upload` | `POST` | `multipart/form-data`<br>`internal_file`, `bank_file` | Runs reconciliation on user-uploaded internal and bank CSV files. |
+| `/api/ask` | `POST` | `{"question": string, "result_context": object}` | Queries the Settlement Q&A agent grounded strictly in current batch data. |
+| `/api/health` | `GET` | None | Returns backend status, LLM runtime mode (`live` vs `mock`), and active provider. |
+
+---
+
+## Technology Stack
+
+- **Backend**: Python 3.11+, FastAPI, Uvicorn, Pandas, RapidFuzz, Faker, Groq SDK, Pydantic
+- **Frontend**: React 19, Vite, Tailwind CSS v4, Lucide Icons
+- **Inference**: Groq Cloud API (`openai/gpt-oss-20b` / `llama-3.3-70b-versatile`) with offline fallback
