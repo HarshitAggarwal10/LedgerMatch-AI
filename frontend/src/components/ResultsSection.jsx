@@ -9,7 +9,7 @@ import PipelineProgress from "./PipelineProgress";
 import ConfidenceExplorer from "./ConfidenceExplorer";
 import { downloadCsv } from "../csvExport";
 
-export default function ResultsSection({ loading, loadingText, result }) {
+export default function ResultsSection({ loading, loadingText, result, currency }) {
   const [explainQuestion, setExplainQuestion] = useState(null);
 
   return (
@@ -30,9 +30,10 @@ export default function ResultsSection({ loading, loadingText, result }) {
           <ConfidenceExplorer data={result} />
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            <MatchedTable data={result} />
+            <MatchedTable data={result} currency={currency} />
             <ExceptionsTable
               exceptions={result.exceptions}
+              currency={currency}
               onExplain={(id) =>
                 setExplainQuestion({ text: `Why didn't ${id} match?`, nonce: Date.now() })
               }
@@ -48,7 +49,7 @@ export default function ResultsSection({ loading, loadingText, result }) {
             </button>
           </div>
 
-          <GatewaySection gatewayReconciliation={result.gateway_reconciliation} />
+          <GatewaySection gatewayReconciliation={result.gateway_reconciliation} currency={currency} />
           <QAPanel result={result} externalQuestion={explainQuestion} />
         </>
       )}

@@ -29,7 +29,7 @@ between runs since the synthetic batch is regenerated fresh each time — see
 2. **Fuzzy match** — merchant-name similarity (`rapidfuzz`) plus amount and
    date tolerance, for records the bank feed wrote slightly differently.
 3. **LLM agent review** — whatever's still ambiguous goes to an LLM (Groq
-   or Claude), which reasons about both records side by side and returns a
+   API), which reasons about both records side by side and returns a
    decision, confidence score, and one-sentence explanation.
 4. **Gateway cross-check** — a *third*, independent source (the payment
    gateway's own settlement file) confirms or flags what the first two
@@ -143,22 +143,14 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Then edit `.env` and set **one** of these:
+Then edit `.env` and set your key:
 
 ```bash
-# Recommended: Groq has a generous free tier, no credit card required.
-# Get a key at https://console.groq.com/keys
 GROQ_API_KEY=gsk_your-key-here
-
-# Or: Claude, used only if GROQ_API_KEY is not set.
-# Get a key at https://console.anthropic.com/settings/keys
-ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-If Groq is set, it's used for everything (the LLM agent and the Settlement
-Q&A agent). If a live call ever fails for any reason — bad key, rate limit,
-no credit — the app catches it and falls back to mock mode automatically,
-labelling the response so it's never silently faked.
+If Groq is set, it's used for the LLM agent and Settlement Q&A agent. If a live
+call fails or no key is set, the app falls back to mock mode automatically.
 
 ### 2. Frontend
 
@@ -220,18 +212,15 @@ answer key.)
 | `/api/reconcile/sample?n_records=60&seed=42` | POST | Generate a synthetic batch and reconcile it (with scoring). `seed` is optional — omit for a fresh random batch each time, set it for a reproducible run. |
 | `/api/reconcile/upload` | POST | Reconcile two uploaded CSVs (`internal_file`, `bank_file`) |
 | `/api/ask` | POST | `{question, result_context}` → grounded answer about that run |
-| `/api/health` | GET | `{status, llm_mode, provider}` — reports live vs. mock and which provider (groq/claude) is active |
+| `/api/health` | GET | `{status, llm_mode, provider}` — reports live vs. mock and active provider |
 
 ---
 
 ## Tech stack
 
-**Backend:** Python, FastAPI, pandas, rapidfuzz, Faker, Groq SDK, Anthropic SDK
+**Backend:** Python, FastAPI, pandas, rapidfuzz, Faker, Groq SDK
 **Frontend:** React, Vite, Tailwind CSS v4
-**AI:** Groq (`openai/gpt-oss-20b`, free tier) as the primary LLM provider,
-with Claude (`claude-sonnet-4-6`) as a secondary option and a fully
-offline mock fallback — used for both ambiguous-match resolution and the
-Settlement Q&A agent
+**AI:** Groq (`openai/gpt-oss-20b`) with offline mock fallback
 
 ## What's intentionally *not* here
 

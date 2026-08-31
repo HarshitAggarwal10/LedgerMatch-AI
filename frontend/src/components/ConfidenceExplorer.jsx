@@ -9,15 +9,13 @@ const BUCKETS = [
   { label: "100", min: 100, max: 101 },
 ];
 
-const BUILT_IN_THRESHOLD = 90; // matches FUZZY_AUTO_THRESHOLD in backend/matcher.py
+const BUILT_IN_THRESHOLD = 90;
 
 export default function ConfidenceExplorer({ data }) {
   const { exact_matches, fuzzy_matches, llm_matches, scoring } = data;
   const [threshold, setThreshold] = useState(BUILT_IN_THRESHOLD);
 
   const scorable = useMemo(() => {
-    // Fuzzy + agent matches only -- exact matches carry no meaningful
-    // "confidence" tradeoff since they're identical on reference+amount.
     const fuzzy = fuzzy_matches.map((m) => ({ ...m, confidence: m.confidence, source: "fuzzy" }));
     const agent = llm_matches.map((m) => ({ ...m, confidence: m.llm_confidence, source: "agent" }));
     return [...fuzzy, ...agent];
@@ -71,7 +69,6 @@ export default function ConfidenceExplorer({ data }) {
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.2fr]">
-        {/* Histogram */}
         <div>
           <p className="mb-2 text-[0.78rem] text-text-muted">Confidence distribution (all matched records)</p>
           <div className="flex h-32 items-end gap-2">
@@ -90,7 +87,6 @@ export default function ConfidenceExplorer({ data }) {
           </div>
         </div>
 
-        {/* Slider + live recompute */}
         <div>
           <div className="flex items-center justify-between text-[0.78rem] text-text-secondary">
             <span>Confidence threshold</span>

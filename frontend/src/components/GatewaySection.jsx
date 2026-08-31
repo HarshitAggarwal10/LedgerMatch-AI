@@ -1,9 +1,6 @@
-function formatAmount(n) {
-  if (n === null || n === undefined) return "—";
-  return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { formatAmount } from "../currency";
 
-export default function GatewaySection({ gatewayReconciliation }) {
+export default function GatewaySection({ gatewayReconciliation, currency }) {
   if (!gatewayReconciliation) return null;
 
   const { full_match, partial_match, gateway_only } = gatewayReconciliation;
@@ -66,7 +63,7 @@ export default function GatewaySection({ gatewayReconciliation }) {
                   <tr key={i} className="border-b border-border-soft last:border-none hover:bg-bg-card-hover">
                     <td className="px-3 py-2 font-mono text-text-secondary">{p.internal_id}</td>
                     <td className="px-3 py-2 font-mono text-text-secondary">{p.merchant_name}</td>
-                    <td className="px-3 py-2 font-mono text-text-secondary">₹{formatAmount(p.amount)}</td>
+                    <td className="px-3 py-2 font-mono text-text-secondary">{formatAmount(p.amount, currency)}</td>
                     <td className="px-3 py-2 text-text-secondary">{p.gateway_note}</td>
                   </tr>
                 ))}

@@ -1,13 +1,4 @@
-"""
-pipeline.py
------------
-Wires matcher.py -> llm_agent.py -> gateway_matcher.py -> evaluator.py into
-one call, and shapes the output into exactly what the frontend needs: a
-summary (including throughput), a matched table, a three-way reconciliation
-breakdown, and an exceptions table with a human-readable reason for every
-single unresolved record. Nothing here rounds numbers up or hides a bad
-case -- if the pipeline can't resolve something, it says so.
-"""
+"""Reconciliation pipeline orchestration."""
 
 import time
 
@@ -21,7 +12,6 @@ def run_pipeline(internal_df, bank_df, gateway_df=None, answer_key_df=None):
 
     match_result = run_matching(internal_df, bank_df)
 
-    # --- Resolve the ambiguous middle ground with the LLM agent -----------
     llm_matches = []
     for pair in match_result.needs_llm:
         i_rec = {
@@ -44,10 +34,10 @@ def run_pipeline(internal_df, bank_df, gateway_df=None, answer_key_df=None):
             "llm_confidence": decision["confidence"],
             "llm_reason": decision["reason"],
             "llm_mode": decision["mode"],
+            "provider": decision.get("provider"),
         })
     match_result.llm_matches = llm_matches
 
-    # --- Build the exceptions list (every unresolved record, with a reason)
     exceptions = []
     for rec in match_result.unmatched_internal:
         exceptions.append({
@@ -88,7 +78,6 @@ def run_pipeline(internal_df, bank_df, gateway_df=None, answer_key_df=None):
     else:
         result["scoring"] = None
 
-    # --- Stage 2: bring in the third source (gateway settlements) ---------
     if gateway_df is not None and len(gateway_df) > 0:
         two_way_resolved = (
             [{"internal_id": m["internal_id"], "merchant_name": m["merchant_name"], "amount": m["amount"]}

@@ -1,17 +1,4 @@
-"""
-llm_agent.py
-------------
-This is the genuinely "agentic" part of the pipeline. Everything upstream
-(matcher.py) is deterministic rule-based logic -- fast, cheap, explainable,
-but it can't make judgment calls. Whatever it can't confidently resolve gets
-handed to an LLM, which looks at both records side by side and reasons
-about whether they're the same underlying transaction, the way a human
-analyst would when a fuzzy-match score alone isn't conclusive.
-
-Provider order: Groq -> Claude -> mock (see llm_provider.py). Mock
-decisions are always clearly labelled as such -- never silently
-substituted for a real one.
-"""
+"""LLM-based reconciliation for ambiguous transaction pairs."""
 
 import json
 
@@ -46,12 +33,7 @@ def _build_user_prompt(internal_record: dict, bank_record: dict) -> str:
 
 
 def _mock_decision(internal_record: dict, bank_record: dict) -> dict:
-    """
-    A transparent, non-LLM fallback so the app runs without any API key.
-    Uses the same signal a human glancing at the pair would: name overlap
-    and amount closeness. This is intentionally simple -- it exists so the
-    UI and pipeline are fully testable, not to imitate the real model.
-    """
+    """Fallback heuristic decision when no LLM API is configured."""
     name_a = internal_record["merchant_name"].lower()
     name_b = str(bank_record.get("bank_narration", bank_record.get("narration", ""))).lower()
     overlap = len(set(name_a.split()) & set(name_b.split()))
@@ -79,9 +61,9 @@ def _mock_decision(internal_record: dict, bank_record: dict) -> dict:
 
 
 def resolve_pair(internal_record: dict, bank_record: dict) -> dict:
-    """Returns a decision dict with an added 'mode': 'live' or 'mock'."""
+    """Resolve an ambiguous pair using LLM with fallback to heuristic logic."""
     user_prompt = _build_user_prompt(internal_record, bank_record)
-    result = call_llm(SYSTEM_PROMPT, user_prompt, max_tokens=200)
+    result = call_llm(SYSTEM_PROMPT, user_prompt, max_tokens=1000)
 
     if result["text"] is not None:
         try:
@@ -91,8 +73,6 @@ def resolve_pair(internal_record: dict, bank_record: dict) -> dict:
             decision["provider"] = result["provider"]
             return decision
         except (json.JSONDecodeError, KeyError):
-            # live call succeeded but didn't return parseable JSON -- fall
-            # through to mock rather than crash the pipeline on one record
             pass
 
     decision = _mock_decision(internal_record, bank_record)

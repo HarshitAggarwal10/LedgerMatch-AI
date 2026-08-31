@@ -1,26 +1,13 @@
-"""
-main.py
--------
-LedgerMatch AI backend. Endpoints:
-
-  POST /api/reconcile/sample   -> generates a fresh synthetic 3-source batch
-                                   (internal ledger, bank, gateway) on the
-                                   fly and reconciles it, with scoring since
-                                   we know the ground truth we made.
-  POST /api/reconcile/upload   -> reconciles two user-uploaded CSVs
-                                   (internal ledger + bank statement).
-                                   No scoring, since there's no answer key
-                                   for real data.
-  POST /api/ask                -> Settlement Q&A: answers a question about
-                                   a specific run, grounded in that run's data.
-  GET  /api/health             -> reports whether the LLM agent is running
-                                   live (API key set) or in mock mode.
-
-Run with:  uvicorn main:app --reload --port 8000
-"""
+"""FastAPI application entry point and routing."""
 
 import io
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 import pandas as pd
 from fastapi import FastAPI, UploadFile, File
@@ -75,7 +62,6 @@ async def reconcile_upload(
             "expected_bank_columns": sorted(required_bank),
         }
 
-    # no gateway file for user uploads yet -- two-source reconciliation only
     result = run_pipeline(internal_df, bank_df, gateway_df=None, answer_key_df=None)
     return result
 
@@ -94,12 +80,7 @@ def ask(req: AskRequest):
 def health():
     if os.environ.get("GROQ_API_KEY"):
         return {"status": "ok", "llm_mode": "live", "provider": "groq"}
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        return {"status": "ok", "llm_mode": "live", "provider": "claude"}
     return {"status": "ok", "llm_mode": "mock", "provider": None}
 
 
-# --- serve the built React frontend ----------------------------------------
-# `npm run build` in ../frontend produces ../frontend/dist. Mounted at root
-# with html=True so "/" serves index.html and asset paths resolve directly.
 app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="frontend")

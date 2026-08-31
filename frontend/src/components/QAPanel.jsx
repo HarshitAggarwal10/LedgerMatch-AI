@@ -29,8 +29,6 @@ export default function QAPanel({ result, externalQuestion }) {
     }
   };
 
-  // When a row's "Explain →" button fires a question up from ExceptionsTable,
-  // scroll the panel into view and send it automatically.
   useEffect(() => {
     if (externalQuestion && externalQuestion.nonce !== lastExternalRef.current) {
       lastExternalRef.current = externalQuestion.nonce;

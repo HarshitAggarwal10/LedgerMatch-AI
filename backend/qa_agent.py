@@ -1,14 +1,3 @@
-"""
-qa_agent.py
------------
-Powers the "Settlement Q&A agent" feature: answers natural-language
-questions about a specific reconciliation run, grounded strictly in that
-run's own JSON output. The model is explicitly told not to use outside
-knowledge and to say so if the data doesn't contain the answer -- this is
-what keeps it from hallucinating a number that was never actually computed.
-
-Provider order: Groq -> Claude -> mock (see llm_provider.py).
-"""
 
 import json
 import re
@@ -62,7 +51,7 @@ def _mock_answer(question: str, result_context: dict) -> str:
         total_exception_amount = sum(e.get("amount") or 0 for e in exceptions)
         return (
             f"There are {len(exceptions)} unresolved exceptions totalling "
-            f"roughly Rs.{total_exception_amount:,.2f} in amount across them. "
+            f"roughly {total_exception_amount:,.2f} (in whatever currency your data is in) across them. "
             f"Match rate for this run was {scoring.get('match_rate_pct', 'unknown')}%."
         )
     if "summar" in q:

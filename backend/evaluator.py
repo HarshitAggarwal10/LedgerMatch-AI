@@ -1,19 +1,4 @@
-"""
-evaluator.py
-------------
-Scores the pipeline's matches against the known ground truth (answer_key).
-This only works because data_generator.py records the true mapping when it
-creates the synthetic mismatches -- in a real deployment you would not have
-this, which is exactly why the exception list matters so much more than the
-match rate alone.
-
-Reports:
-  - match_rate:        % of true matches the pipeline found correctly
-  - false_match_rate:  % of the pipeline's matches that were WRONG
-                        (the expensive kind of mistake in real finance)
-  - exceptions:        every record the pipeline left unresolved, each with
-                        a plain-English reason
-"""
+"""Evaluation metrics comparing match results against ground truth."""
 
 
 def evaluate(match_result, answer_key_df, internal_df, bank_df):
@@ -69,17 +54,7 @@ def evaluate(match_result, answer_key_df, internal_df, bank_df):
 
 
 def _evaluate_trap_case(answer_key_df, all_predicted):
-    """
-    data_generator.py plants one deliberate 'lookalike trap' -- a bank-only
-    record engineered to superficially resemble a real transaction (same
-    merchant, close-but-wrong amount) with no true internal counterpart.
-    This checks, honestly, whether THIS run's pipeline got fooled by it or
-    correctly left it as an exception. Surfaced separately from the
-    aggregate false-match rate because it's the single most legible proof
-    point that the system isn't just rubber-stamping plausible-looking
-    pairs -- worth calling out on its own rather than burying it in a
-    batch-wide percentage.
-    """
+    """Evaluate whether the pipeline matched the planted lookalike record."""
     trap_rows = answer_key_df[answer_key_df["mismatch_type"] == "lookalike_trap_should_not_match"]
     if trap_rows.empty:
         return None

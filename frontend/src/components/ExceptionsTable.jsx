@@ -1,9 +1,6 @@
-function formatAmount(n) {
-  if (n === null || n === undefined) return "—";
-  return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { formatAmount } from "../currency";
 
-export default function ExceptionsTable({ exceptions, onExplain }) {
+export default function ExceptionsTable({ exceptions, onExplain, currency }) {
   return (
     <div>
       <h3 className="flex items-center gap-2 font-display text-xl font-normal">
@@ -39,7 +36,7 @@ export default function ExceptionsTable({ exceptions, onExplain }) {
                   <td className="px-3 py-2 font-mono text-text-secondary">{e.side}</td>
                   <td className="px-3 py-2 font-mono text-text-secondary">{e.id}</td>
                   <td className="px-3 py-2 font-mono text-text-secondary">{e.merchant_name}</td>
-                  <td className="px-3 py-2 font-mono text-text-secondary">₹{formatAmount(e.amount)}</td>
+                  <td className="px-3 py-2 font-mono text-text-secondary">{formatAmount(e.amount, currency)}</td>
                   <td className="px-3 py-2 text-text-secondary">{e.reason}</td>
                   <td className="px-3 py-2">
                     <button

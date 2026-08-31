@@ -1,26 +1,8 @@
-"""
-gateway_matcher.py
--------------------
-Stage 2 of reconciliation: brings in the THIRD source (payment gateway
-settlement report) and reconciles it against records already resolved
-between internal <-> bank.
-
-Because the gateway reference is modelled as reliable (unlike the bank
-feed), this stage matches primarily on reference, with a fuzzy fallback on
-merchant name + amount (accounting for the gateway's processing fee) for
-anything that doesn't line up on reference alone.
-
-Every record ends up with a three_way_status:
-  - "full_match"     : internal, bank, AND gateway all agree
-  - "partial_match"  : internal + bank agree, but no corresponding gateway
-                        record found (or vice versa) -- flagged, not hidden
-  - "gateway_only"    : gateway shows a settlement with no internal/bank
-                        counterpart at all
-"""
+"""Three-way reconciliation logic against payment gateway settlement data."""
 
 from rapidfuzz import fuzz
 
-GATEWAY_FEE_TOLERANCE_PCT = 0.035  # fee typically ~1.9-2.5%, allow some slack
+GATEWAY_FEE_TOLERANCE_PCT = 0.035
 NAME_MATCH_FLOOR = 70
 
 
@@ -32,17 +14,7 @@ def _fee_consistent(internal_amount: float, gateway_amount: float) -> bool:
 
 
 def reconcile_with_gateway(resolved_records: list, gateway_df) -> dict:
-    """
-    resolved_records: list of dicts, each with at minimum
-        internal_id, merchant_name, amount   (the two-way matched/exception
-        records coming out of the internal<->bank stage)
-
-    Returns {
-      "full_match": [...],
-      "partial_match": [...],   # each annotated with why gateway didn't confirm
-      "gateway_only": [...],    # gateway records with no internal counterpart
-    }
-    """
+    """Reconcile two-way resolved records against payment gateway settlements."""
     gateway_records = gateway_df.to_dict("records")
     gateway_by_ref = {}
     for g in gateway_records:
@@ -58,15 +30,13 @@ def reconcile_with_gateway(resolved_records: list, gateway_df) -> dict:
 
         chosen = None
         if candidates:
-            # reference matched -- just sanity-check the fee makes sense
             for g in candidates:
                 if _fee_consistent(rec["amount"], g["gateway_amount"]):
                     chosen = g
                     break
             if chosen is None:
-                chosen = candidates[0]  # reference matched but fee looks odd; still surface it
+                chosen = candidates[0]
         else:
-            # no reference hit -- fall back to name + fee-consistent amount
             best_score = -1
             for g in gateway_records:
                 if g["gateway_id"] in used_gateway_ids:

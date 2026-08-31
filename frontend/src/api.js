@@ -1,4 +1,4 @@
-const BASE = ""; // same-origin: dev server proxies /api, prod is served by FastAPI directly
+const BASE = "";
 
 export async function fetchHealth() {
   const res = await fetch(`${BASE}/api/health`);

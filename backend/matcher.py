@@ -1,27 +1,12 @@
-"""
-matcher.py
-----------
-Two-pass deterministic reconciliation:
-
-  Pass 1 (exact):  match on shared reference id + amount to the paisa.
-                    This alone resolves the bulk of real-world reconciliation.
-  Pass 2 (fuzzy):   for whatever's left, score candidate pairs on merchant
-                    name similarity + amount tolerance + date tolerance.
-                    High-confidence pairs auto-match; the rest fall through
-                    to the LLM agent layer.
-
-No ML training happens here on purpose -- this is fast, explainable,
-deterministic logic, which is what you want to run first in a finance
-pipeline before reaching for anything probabilistic.
-"""
+"""Two-pass deterministic reconciliation engine (exact and fuzzy matching)."""
 
 from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz
 
-FUZZY_AUTO_THRESHOLD = 90   # >= this score -> auto-match, no LLM needed
-FUZZY_REVIEW_FLOOR = 55     # below this -> not worth sending to the LLM at all
-AMOUNT_TOLERANCE_PCT = 0.02  # 2% relative tolerance (covers small fees)
+FUZZY_AUTO_THRESHOLD = 90
+FUZZY_REVIEW_FLOOR = 55
+AMOUNT_TOLERANCE_PCT = 0.02
 DATE_TOLERANCE_DAYS = 3
 
 
@@ -29,7 +14,7 @@ DATE_TOLERANCE_DAYS = 3
 class MatchResult:
     exact_matches: list = field(default_factory=list)
     fuzzy_matches: list = field(default_factory=list)
-    needs_llm: list = field(default_factory=list)   # candidate pairs, ambiguous
+    needs_llm: list = field(default_factory=list)
     unmatched_internal: list = field(default_factory=list)
     unmatched_bank: list = field(default_factory=list)
 
@@ -60,7 +45,7 @@ def run_matching(internal_df, bank_df) -> MatchResult:
     matched_bank_ids = set()
     remaining_internal = []
 
-    # --- Pass 1: exact match on reference ---------------------------------
+    # Pass 1: Exact match on reference and amount
     bank_by_ref = {}
     for b in bank_records:
         bank_by_ref.setdefault(b["reference"], []).append(b)
@@ -89,7 +74,7 @@ def run_matching(internal_df, bank_df) -> MatchResult:
 
     remaining_bank = [b for b in bank_records if b["bank_id"] not in matched_bank_ids]
 
-    # --- Pass 2: fuzzy match on the leftovers ------------------------------
+    # Pass 2: Fuzzy match on name, amount tolerance, and date tolerance
     still_unmatched_internal = []
     used_bank_ids = set()
 
@@ -133,7 +118,7 @@ def run_matching(internal_df, bank_df) -> MatchResult:
         elif best_score >= FUZZY_REVIEW_FLOOR:
             pair["method"] = "fuzzy_candidate"
             result.needs_llm.append(pair)
-            used_bank_ids.add(best_bank["bank_id"])  # reserve it, pending LLM
+            used_bank_ids.add(best_bank["bank_id"])
         else:
             still_unmatched_internal.append(i_rec)
 

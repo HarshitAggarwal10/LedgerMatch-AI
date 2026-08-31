@@ -2,7 +2,7 @@ const NODES = [
   { title: "CSV uploads", sub: "or synthetic batch" },
   { title: "Exact matcher", sub: "pandas" },
   { title: "Fuzzy matcher", sub: "rapidfuzz" },
-  { title: "LLM agent", sub: "Claude API", highlight: true },
+  { title: "LLM agent", sub: "Groq API", highlight: true },
   { title: "Gateway cross-check", sub: "3rd source" },
   { title: "Scored report", sub: "FastAPI JSON" },
 ];

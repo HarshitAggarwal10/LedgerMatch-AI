@@ -1,4 +1,5 @@
 import { useState, Fragment } from "react";
+import { formatAmount } from "../currency";
 
 const methodStyle = {
   exact: "text-success border-success/40",
@@ -6,12 +7,7 @@ const methodStyle = {
   agent: "text-accent-bright border-accent-bright/50",
 };
 
-function formatAmount(n) {
-  if (n === null || n === undefined) return "—";
-  return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-export default function MatchedTable({ data }) {
+export default function MatchedTable({ data, currency }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
 
   const rows = [
@@ -65,7 +61,7 @@ export default function MatchedTable({ data }) {
                     <td className="px-3 py-2 font-mono text-text-secondary">{r.internal_id}</td>
                     <td className="px-3 py-2 font-mono text-text-secondary">{r.bank_id}</td>
                     <td className="px-3 py-2 font-mono text-text-secondary">{r.merchant_name}</td>
-                    <td className="px-3 py-2 font-mono text-text-secondary">₹{formatAmount(r.amount)}</td>
+                    <td className="px-3 py-2 font-mono text-text-secondary">{formatAmount(r.amount, currency)}</td>
                     <td className="px-3 py-2">
                       <span className={`rounded border px-1.5 py-0.5 font-mono text-[0.7rem] ${methodStyle[r.method]}`}>
                         {r.method}

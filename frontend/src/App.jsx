@@ -7,6 +7,7 @@ import PipelineSteps from "./components/PipelineSteps";
 import Architecture from "./components/Architecture";
 import Footer from "./components/Footer";
 import { fetchHealth, reconcileSample, reconcileUpload } from "./api";
+import { DEFAULT_CURRENCY } from "./currency";
 
 export default function App() {
   const [llmMode, setLlmMode] = useState(null);
@@ -16,6 +17,7 @@ export default function App() {
   const [loadingText, setLoadingText] = useState("");
   const [result, setResult] = useState(null);
   const [seed, setSeed] = useState("");
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
 
   useEffect(() => {
     fetchHealth()
@@ -82,10 +84,12 @@ export default function App() {
           running={loading}
           seed={seed}
           onSeedChange={setSeed}
+          currency={currency}
+          onCurrencyChange={setCurrency}
         />
         {showUpload && <UploadPanel onRunUpload={runUpload} running={loading} />}
         {(loading || result) && (
-          <ResultsSection loading={loading} loadingText={loadingText} result={result} />
+          <ResultsSection loading={loading} loadingText={loadingText} result={result} currency={currency} />
         )}
         <PipelineSteps />
         <Architecture />

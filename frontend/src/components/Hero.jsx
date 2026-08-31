@@ -1,3 +1,5 @@
+import { CURRENCIES } from "../currency";
+
 const LEDGER_ROWS = [
   { internal: "TXN1000", bank: "STL5000", status: "match", label: "— matched —" },
   { internal: "TXN1001", bank: "STL5001", status: "match", label: "— matched —" },
@@ -11,7 +13,7 @@ const statusColor = {
   exception: "text-danger",
 };
 
-export default function Hero({ onRunSample, onShowUpload, running, seed, onSeedChange }) {
+export default function Hero({ onRunSample, onShowUpload, running, seed, onSeedChange, currency, onCurrencyChange }) {
   return (
     <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-8 pb-16 pt-20 md:grid-cols-[1.1fr_0.9fr]">
       <div>
@@ -26,8 +28,9 @@ export default function Hero({ onRunSample, onShowUpload, running, seed, onSeedC
         <p className="mt-5 max-w-[46ch] text-text-secondary text-[1.05rem]">
           LedgerMatch reconciles an internal payment ledger against a bank settlement
           file and a payment gateway report — matching what agrees across all three,
-          and explaining, record by record, everything that doesn't. No cherry-picked
-          demo runs: every number below is computed live.
+          and explaining, record by record, everything that doesn't. Works with any
+          business's CSVs, in any currency, anywhere — every number below is computed
+          live, never cherry-picked.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <button
@@ -45,25 +48,43 @@ export default function Hero({ onRunSample, onShowUpload, running, seed, onSeedC
           </button>
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <label htmlFor="seed-input" className="font-mono text-[0.72rem] text-text-muted">
-            seed (optional, for a reproducible run):
-          </label>
-          <input
-            id="seed-input"
-            type="number"
-            value={seed}
-            onChange={(e) => onSeedChange(e.target.value)}
-            placeholder="random"
-            className="w-24 rounded border border-border bg-bg-card px-2 py-1 font-mono text-[0.72rem] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => onSeedChange("42")}
-            className="font-mono text-[0.68rem] text-text-muted underline decoration-dotted hover:text-accent-bright"
-          >
-            use 42
-          </button>
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label htmlFor="seed-input" className="font-mono text-[0.72rem] text-text-muted">
+              seed (optional, for a reproducible run):
+            </label>
+            <input
+              id="seed-input"
+              type="number"
+              value={seed}
+              onChange={(e) => onSeedChange(e.target.value)}
+              placeholder="random"
+              className="w-24 rounded border border-border bg-bg-card px-2 py-1 font-mono text-[0.72rem] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => onSeedChange("42")}
+              className="font-mono text-[0.68rem] text-text-muted underline decoration-dotted hover:text-accent-bright"
+            >
+              use 42
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label htmlFor="currency-select" className="font-mono text-[0.72rem] text-text-muted">
+              currency:
+            </label>
+            <select
+              id="currency-select"
+              value={currency}
+              onChange={(e) => onCurrencyChange(e.target.value)}
+              className="rounded border border-border bg-bg-card px-2 py-1 font-mono text-[0.72rem] text-text-primary focus:border-accent focus:outline-none"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

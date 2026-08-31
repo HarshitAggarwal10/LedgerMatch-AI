@@ -7,9 +7,6 @@ const STAGES = [
   "Cross-checking against the payment gateway…",
 ];
 
-// Purely a loading indicator -- no numbers are shown here, because the real
-// per-stage counts aren't known until the backend finishes the whole run.
-// Once results land, StatsGrid animates the real numbers counting up.
 export default function PipelineProgress({ loadingText }) {
   const [stageIndex, setStageIndex] = useState(0);
 
