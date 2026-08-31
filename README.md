@@ -28,9 +28,9 @@ between runs since the synthetic batch is regenerated fresh each time — see
    most real-world reconciliation instantly, no AI involved.
 2. **Fuzzy match** — merchant-name similarity (`rapidfuzz`) plus amount and
    date tolerance, for records the bank feed wrote slightly differently.
-3. **LLM agent review** — whatever's still ambiguous goes to Claude, which
-   reasons about both records side by side and returns a decision,
-   confidence score, and one-sentence explanation.
+3. **LLM agent review** — whatever's still ambiguous goes to an LLM (Groq
+   or Claude), which reasons about both records side by side and returns a
+   decision, confidence score, and one-sentence explanation.
 4. **Gateway cross-check** — a *third*, independent source (the payment
    gateway's own settlement file) confirms or flags what the first two
    stages agreed on, upgrading this from a two-file diff to genuine
@@ -38,8 +38,25 @@ between runs since the synthetic batch is regenerated fresh each time — see
 5. **Honest exceptions** — anything still unresolved is reported with a
    specific reason, never hidden or forced into a fake match.
 6. **Settlement Q&A agent** — ask natural-language questions about a
-   specific run ("how much is still unreconciled?") and get an answer
-   grounded strictly in that run's own data.
+   specific run ("how much is still unreconciled?", "why didn't TXN1042
+   match?") and get an answer grounded strictly in that run's own data.
+
+## Interactive features
+
+- **Click any matched row** to see exactly why it matched (which pass
+  resolved it, and the specific reasoning for agent-resolved pairs).
+- **"Explain →" on any exception** jumps to the Q&A panel and asks about
+  that specific record automatically.
+- **Trap-case spotlight** — every run includes one deliberately engineered
+  "lookalike" record designed to tempt a false match. The UI reports,
+  honestly, whether *this* run got fooled by it.
+- **Confidence threshold slider** — drag the auto-match confidence cutoff
+  and watch match rate / false-match rate recompute live, entirely
+  client-side, visualizing the precision-vs-recall tradeoff.
+- **Confidence distribution histogram** — see the spread of match
+  confidence scores across the whole batch at a glance.
+- **Seeded demo mode** — set a seed (or use the "use 42" shortcut) to
+  replay the exact same batch and results for a reproducible pitch demo.
 
 ## Why this design
 
@@ -200,10 +217,10 @@ answer key.)
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/api/reconcile/sample?n_records=60` | POST | Generate a fresh synthetic batch and reconcile it (with scoring) |
+| `/api/reconcile/sample?n_records=60&seed=42` | POST | Generate a synthetic batch and reconcile it (with scoring). `seed` is optional — omit for a fresh random batch each time, set it for a reproducible run. |
 | `/api/reconcile/upload` | POST | Reconcile two uploaded CSVs (`internal_file`, `bank_file`) |
 | `/api/ask` | POST | `{question, result_context}` → grounded answer about that run |
-| `/api/health` | GET | `{status, llm_mode}` — reports live vs. mock |
+| `/api/health` | GET | `{status, llm_mode, provider}` — reports live vs. mock and which provider (groq/claude) is active |
 
 ---
 
